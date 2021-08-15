@@ -70,7 +70,7 @@ static void MX_I2C1_Init(void);
 static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
-
+// StepperMotor
 void delayMicro (uint16_t us)
 {
   __HAL_TIM_SET_COUNTER(&htim1, 0);
