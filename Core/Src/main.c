@@ -13,6 +13,13 @@
   * the "License"; You may not use this file except in compliance with the
   * License. You may obtain a copy of the License at:
   *                        opensource.org/licenses/BSD-3-Clause
+  * 
+  * Desenvolvido por Daniel Lane e Viviane Klassen (UTFPR-Curitiba)
+  * 
+  * Componentes externos:
+  * Botao Rotacional (Rotary encoder)
+  * Display OLED
+  * Motor de Passo (Nema) com driver (DRV8825)
   *
   ******************************************************************************
   */
@@ -183,12 +190,14 @@ int main(void)
 	  HAL_Delay (500);
 
 	  // StepperMotor
+    /*
 	  for (iStep=0; iStep < stepsperrev; iStep++){
 		  HAL_GPIO_WritePin(GPIOB, MotorSTEP_Pin, GPIO_PIN_SET);
 		  delayMicro(2000);
 		  HAL_GPIO_WritePin(GPIOB, MotorSTEP_Pin, GPIO_PIN_RESET);
 		  delayMicro(2000);
 	  }
+    */
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
