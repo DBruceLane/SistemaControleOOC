@@ -126,7 +126,7 @@ int main(void)
 
   // OLED
   SSD1306_Init();
-  char snum[5];
+  //char snum[5];
 
   SSD1306_GotoXY (0,0);
   SSD1306_Puts ("Testando", &Font_11x18, 1);
