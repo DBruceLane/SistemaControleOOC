@@ -112,7 +112,7 @@ void P1_32()
 {
   PPR = 6400;                        // PPR pulsos por volta
   HAL_GPIO_WritePin(GPIOB, M0_Pin, 1);    // Configura modo Micro Passo 1/32
-  HAL_GPIO_WritePin(GPIOB, M1_Pin, 2);
+  HAL_GPIO_WritePin(GPIOB, M1_Pin, 0);
   HAL_GPIO_WritePin(GPIOB, M2_Pin, 1);
   
 }
@@ -189,9 +189,9 @@ int main(void)
   disa_DRV8825();           // Desativa as saidas DRV8825
   P1_32();                    // Seleciona modo Passo Completo
 
-  HAL_GPIO_WritePin(GPIOB, SLP_Pin, 0);  // Desativa modo sleep do DRV8825
+  HAL_GPIO_WritePin(GPIOB, SLP_Pin, 1);  // Desativa modo sleep do DRV8825
   rst_DRV8825();            // Reseta o chip DRV8825
-  HAL_GPIO_WritePin(GPIOB, ENA_Pin, 1);   // Ativa as saidas DRV8825
+  HAL_GPIO_WritePin(GPIOB, ENA_Pin, 0);   // Ativa as saidas DRV8825
 
   /* USER CODE END 2 */
 
