@@ -22,12 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-// Button
-#include "stdbool.h"
 
-// OLED
-#include "fonts.h"
-#include "ssd1306.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -39,7 +34,7 @@
 /* USER CODE BEGIN PD */
 
 // StepperMotor
-#define stepsperrev 4096
+//#define stepsperrev 4096
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,38 +43,107 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-I2C_HandleTypeDef hi2c1;
-
 TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN PV */
 
-// RotButton
-GPIO_PinState aLastState;
-GPIO_PinState aState;
-uint32_t counter;
+
 
 // StepperMotor
 uint32_t iStep;
+
+uint32_t MeioPeriodo = 30;   // MeioPeriodo no pulso em microsegundos  correcao de +10 ms 1490
+uint32_t PPS = 200;          // Pulsos por segundo
+//bool sentido = true;   // Variavel de sentido
+uint32_t PPR = 200;            // Número de passos por volta
+uint32_t Pulsos;               // Pulsos para o driver do motor
+uint32_t Voltas;               // voltas do motor
+//float RPM;                // Rotacoes por minuto
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_I2C1_Init(void);
 static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
 
 // StepperMotor
-void delayMicro (uint16_t us)
+void rst_DRV8825()
 {
-  __HAL_TIM_SET_COUNTER(&htim1, 0);
-  while (__HAL_TIM_GET_COUNTER(&htim1) < us);
+  HAL_GPIO_WritePin(GPIOB, RST_Pin, 0);    // Realiza o reset do DRV8825
+  HAL_Delay (1);                           // Atraso de 1 milisegundo
+  HAL_GPIO_WritePin(GPIOB, RST_Pin, 1);    // Libera o reset do DRV8825
+  HAL_Delay (10);                          // Atraso de 10 milisegundos
 }
 
-void stepper_set_rpm (int rpm)  // Set rpm--> max 13, min 1,,,  went to 14 rev/min
+void disa_DRV8825()
 {
-	delayMicro(60000000/stepsperrev/rpm);
+  HAL_GPIO_WritePin(GPIOB, ENA_Pin, 1);    // Desativa o chip DRV8825
+  HAL_Delay (10);                          // Atraso de 10 milisegundos
+}
+
+void ena_DRV8825()
+{
+  HAL_GPIO_WritePin(GPIOB, ENA_Pin, 0);     // Ativa o chip DRV8825
+  HAL_Delay (10);                           // Atraso de 10 milisegundos
+}
+
+void HOR()                                    // Configura o sentido de rotação do Motor
+{
+  HAL_GPIO_WritePin(GPIOA, DIR_Pin, 1);       // Configura o sentido HORÁRIO
+  
+}
+
+void AHR()                                    // Configura o sentido de rotação do Motor
+{
+  HAL_GPIO_WritePin(GPIOA, DIR_Pin, 0);       // Configura o sentido ANTI-HORÁRIO
+  
+}
+
+void PASSO()                              // Pulso do passo do Motor
+{
+  HAL_GPIO_WritePin(GPIOB, STP_Pin, 0);   // Pulso nível baixo
+  HAL_Delay (1);                          // MeioPeriodo de X milisegundos
+  HAL_GPIO_WritePin(GPIOB, STP_Pin, 1);   // Pulso nível alto
+  HAL_Delay (1);                          // MeioPeriodo de X milisegundos
+}
+
+void P1_32()
+{
+  PPR = 6400;                        // PPR pulsos por volta
+  HAL_GPIO_WritePin(GPIOB, M0_Pin, 1);    // Configura modo Micro Passo 1/32
+  HAL_GPIO_WritePin(GPIOB, M1_Pin, 2);
+  HAL_GPIO_WritePin(GPIOB, M2_Pin, 1);
+  
+}
+
+void TesteMotor()            // Gira motor nos dois sentidos
+{
+  HOR();
+  uint32_t i;
+  for (i = 0; i <= Pulsos; i++)       // Incrementa o Contador
+  {
+    PASSO();                              // Avança um passo no Motor
+  }
+  disa_DRV8825();
+  HAL_Delay (750) ;                           // Atraso de 750 mseg
+  ena_DRV8825();
+  AHR();
+  
+  for (i = 0; i <= Pulsos; i++)       // Incrementa o Contador
+  {
+    PASSO();                              // Avança um passo no Motor
+  }
+  disa_DRV8825();
+  HAL_Delay (750) ;                           // Atraso de 750 mseg
+  ena_DRV8825();
+}
+void Frequencia()                     // Configura Frequencia dos pulsos
+{
+  Pulsos = PPR * Voltas;              // Quantidade total de Pulsos  PPR = pulsos por volta
+  //PPS = 1000000 / (2 * MeioPeriodo);  // Frequencia Pulsos por segundo
+  PPS = 2;
+  //RPM = (PPS * 60) / PPR;             // Calculo do RPM
 }
 /* USER CODE END PFP */
 
@@ -95,7 +159,7 @@ void stepper_set_rpm (int rpm)  // Set rpm--> max 13, min 1,,,  went to 14 rev/m
 int main(void)
 {
   /* USER CODE BEGIN 1 */
-  uint32_t i;
+  
   /* USER CODE END 1 */
 
   /* MCU Configuration--------------------------------------------------------*/
@@ -116,38 +180,18 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_I2C1_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
 
-  // Rot Button
-  aLastState = HAL_GPIO_ReadPin(GPIOA,ButtonA_Pin);
-  counter = 0;
-
-  // OLED
-  SSD1306_Init();
-  char snum[5];
-
-  SSD1306_GotoXY (0,0);
-  SSD1306_Puts ("Testando", &Font_11x18, 1);
-  SSD1306_GotoXY (0, 30);
-  SSD1306_Puts ("Display", &Font_11x18, 1);
-  SSD1306_UpdateScreen();
-  HAL_Delay (1000);
-
-  SSD1306_ScrollRight(0,7);
-  HAL_Delay(3000);
-  SSD1306_ScrollLeft(0,7);
-  HAL_Delay(3000);
-  SSD1306_Stopscroll();
-  SSD1306_Clear();
-  SSD1306_GotoXY (35,0);
-  SSD1306_Puts ("Contador", &Font_11x18, 1);
 
   // StepperMotor
-  HAL_GPIO_WritePin(GPIOB, MotorDIR_Pin, GPIO_PIN_SET); // Sentido Horario
-  //HAL_GPIO_WritePin(GPIOB, MotorDIR_Pin, GPIO_PIN_RESET); // Sentido AntiHorario
-  iStep = 0;
+  
+  disa_DRV8825();           // Desativa as saidas DRV8825
+  P1_32();                    // Seleciona modo Passo Completo
+
+  HAL_GPIO_WritePin(GPIOB, SLP_Pin, 0);  // Desativa modo sleep do DRV8825
+  rst_DRV8825();            // Reseta o chip DRV8825
+  HAL_GPIO_WritePin(GPIOB, ENA_Pin, 1);   // Ativa as saidas DRV8825
 
   /* USER CODE END 2 */
 
@@ -155,40 +199,19 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    // Blink LED
-    for (i = 0; i < 8; i++)
-    {
-      HAL_GPIO_WritePin(GPIOC, LEDc13_Pin, 0);
-      HAL_Delay(25);
-      HAL_GPIO_WritePin(GPIOC, LEDc13_Pin, 1);
-      HAL_Delay(50);
-    }
-    HAL_Delay(800);
-
-    // Rot Button
-	  aState = HAL_GPIO_ReadPin(GPIOA,ButtonA_Pin);
-	  if (aState != aLastState){
-		  if (HAL_GPIO_ReadPin(GPIOA,ButtonB_Pin) != aState) {
-			  counter ++; // Sentido Horario
-		  } else{
-			  counter --; // Sentido Anti Horario
-		  }
-	  }
-
-
-	  // OLED
-	  itoa(counter, snum, 10);
-	  SSD1306_Puts (snum, &Font_16x26, 1);
-	  SSD1306_UpdateScreen();
-	  HAL_Delay (500);
+    // Blinky LED
+    HAL_GPIO_WritePin(GPIOC, LEDc13_Pin, 0);
+    HAL_Delay(25);
+    HAL_GPIO_WritePin(GPIOC, LEDc13_Pin, 1);
+    HAL_Delay(50);
 
 	  // StepperMotor
-	  for (iStep=0; iStep < stepsperrev; iStep++){
-		  HAL_GPIO_WritePin(GPIOB, MotorSTEP_Pin, GPIO_PIN_SET);
-		  delayMicro(2000);
-		  HAL_GPIO_WritePin(GPIOB, MotorSTEP_Pin, GPIO_PIN_RESET);
-		  delayMicro(2000);
-	  }
+    Voltas = 1;         // Numero de voltas no Motor
+    P1_32();            // Selecione o Modo do Passo FULL() HALF() P1_4() P1_8() P1_16() P1_32()
+    Frequencia();       // Calcula RPM
+    
+    TesteMotor();       // Testa o Motor
+	  
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -232,40 +255,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-}
-
-/**
-  * @brief I2C1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_I2C1_Init(void)
-{
-
-  /* USER CODE BEGIN I2C1_Init 0 */
-
-  /* USER CODE END I2C1_Init 0 */
-
-  /* USER CODE BEGIN I2C1_Init 1 */
-
-  /* USER CODE END I2C1_Init 1 */
-  hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 100000;
-  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  hi2c1.Init.OwnAddress1 = 0;
-  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c1.Init.OwnAddress2 = 0;
-  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN I2C1_Init 2 */
-
-  /* USER CODE END I2C1_Init 2 */
-
 }
 
 /**
@@ -333,7 +322,11 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_WritePin(LEDc13_GPIO_Port, LEDc13_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(GPIOB, MotorSTEP_Pin|MotorDIR_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(DIR_GPIO_Port, DIR_Pin, GPIO_PIN_RESET);
+
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(GPIOB, STP_Pin|SLP_Pin|RST_Pin|M2_Pin
+                          |M1_Pin|M0_Pin|ENA_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin : LEDc13_Pin */
   GPIO_InitStruct.Pin = LEDc13_Pin;
@@ -342,20 +335,17 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LEDc13_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : ButtonB_Pin ButtonA_Pin */
-  GPIO_InitStruct.Pin = ButtonB_Pin|ButtonA_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
+  /*Configure GPIO pin : DIR_Pin */
+  GPIO_InitStruct.Pin = DIR_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(DIR_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : ButtonClick_Pin */
-  GPIO_InitStruct.Pin = ButtonClick_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  HAL_GPIO_Init(ButtonClick_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : MotorSTEP_Pin MotorDIR_Pin */
-  GPIO_InitStruct.Pin = MotorSTEP_Pin|MotorDIR_Pin;
+  /*Configure GPIO pins : STP_Pin SLP_Pin RST_Pin M2_Pin
+                           M1_Pin M0_Pin ENA_Pin */
+  GPIO_InitStruct.Pin = STP_Pin|SLP_Pin|RST_Pin|M2_Pin
+                          |M1_Pin|M0_Pin|ENA_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;

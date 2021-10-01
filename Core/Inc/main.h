@@ -60,20 +60,22 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define LEDc13_Pin GPIO_PIN_13
 #define LEDc13_GPIO_Port GPIOC
-#define ButtonB_Pin GPIO_PIN_6
-#define ButtonB_GPIO_Port GPIOA
-#define ButtonA_Pin GPIO_PIN_7
-#define ButtonA_GPIO_Port GPIOA
-#define ButtonClick_Pin GPIO_PIN_10
-#define ButtonClick_GPIO_Port GPIOB
-#define MotorSTEP_Pin GPIO_PIN_3
-#define MotorSTEP_GPIO_Port GPIOB
-#define MotorDIR_Pin GPIO_PIN_4
-#define MotorDIR_GPIO_Port GPIOB
-#define DisplaySCL_Pin GPIO_PIN_8
-#define DisplaySCL_GPIO_Port GPIOB
-#define DisplaySDA_Pin GPIO_PIN_9
-#define DisplaySDA_GPIO_Port GPIOB
+#define DIR_Pin GPIO_PIN_15
+#define DIR_GPIO_Port GPIOA
+#define STP_Pin GPIO_PIN_3
+#define STP_GPIO_Port GPIOB
+#define SLP_Pin GPIO_PIN_4
+#define SLP_GPIO_Port GPIOB
+#define RST_Pin GPIO_PIN_5
+#define RST_GPIO_Port GPIOB
+#define M2_Pin GPIO_PIN_6
+#define M2_GPIO_Port GPIOB
+#define M1_Pin GPIO_PIN_7
+#define M1_GPIO_Port GPIOB
+#define M0_Pin GPIO_PIN_8
+#define M0_GPIO_Port GPIOB
+#define ENA_Pin GPIO_PIN_9
+#define ENA_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
 /* USER CODE END Private defines */
