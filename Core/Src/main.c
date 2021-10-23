@@ -50,7 +50,8 @@
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 
-TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim3;
+TIM_HandleTypeDef htim4;
 
 /* USER CODE BEGIN PV */
 
@@ -67,19 +68,24 @@ uint32_t iStep;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_I2C1_Init(void);
-static void MX_TIM1_Init(void);
+static void MX_TIM4_Init(void);
+static void MX_TIM3_Init(void);
 /* USER CODE BEGIN PFP */
 
 // StepperMotor
-void delayMicro (uint16_t us)
-{
-  __HAL_TIM_SET_COUNTER(&htim1, 0);
-  while (__HAL_TIM_GET_COUNTER(&htim1) < us);
-}
 
-void stepper_set_rpm (int rpm)  // Set rpm--> max 13, min 1,,,  went to 14 rev/min
+void HAL_TIM_PeriodElapsedCallback (TIM_HandleTypeDef * htim) // Interrupt do passo do motor
 {
-	delayMicro(60000000/stepsperrev/rpm);
+  HAL_GPIO_WritePin(GPIOB, MotorSTEP_Pin, 1);
+
+/*
+  static uint32_t millis = 0;
+  millis++;
+  if (millis % 1000 == 0) {
+    HAL_GPIO_WritePin(GPIOB, MotorSTEP_Pin, 0);
+  }
+  */
+  
 }
 /* USER CODE END PFP */
 
@@ -117,37 +123,39 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_I2C1_Init();
-  MX_TIM1_Init();
+  MX_TIM4_Init();
+  MX_TIM3_Init();
   /* USER CODE BEGIN 2 */
 
   // Rot Button
+  /*
   aLastState = HAL_GPIO_ReadPin(GPIOA,ButtonA_Pin);
-  counter = 0;
+  counter = 100;
+  */
 
   // OLED
-  SSD1306_Init();
-  char snum[5];
+  
+  //char snum[5];
+  //SSD1306_Init ();
 
-  SSD1306_GotoXY (0,0);
-  SSD1306_Puts ("Testando", &Font_11x18, 1);
-  SSD1306_GotoXY (0, 30);
-  SSD1306_Puts ("Display", &Font_11x18, 1);
-  SSD1306_UpdateScreen();
-  HAL_Delay (1000);
-
-  SSD1306_ScrollRight(0,7);
+  /*
+  SSD1306_Init (); // initialize the display 
   HAL_Delay(3000);
-  SSD1306_ScrollLeft(0,7);
-  HAL_Delay(3000);
-  SSD1306_Stopscroll();
   SSD1306_Clear();
-  SSD1306_GotoXY (35,0);
-  SSD1306_Puts ("Contador", &Font_11x18, 1);
+  HAL_Delay(3000);
+  SSD1306_GotoXY (10,10); // goto 10, 10 
+  SSD1306_Puts ("HELLO", &Font_11x18, 1); // print Hello 
+  SSD1306_GotoXY (10, 30); 
+  SSD1306_Puts ("WORLD !!", &Font_11x18, 1); 
+  SSD1306_UpdateScreen(); // update screen
+  */
+  
 
   // StepperMotor
   HAL_GPIO_WritePin(GPIOB, MotorDIR_Pin, GPIO_PIN_SET); // Sentido Horario
   //HAL_GPIO_WritePin(GPIOB, MotorDIR_Pin, GPIO_PIN_RESET); // Sentido AntiHorario
   iStep = 0;
+  HAL_TIM_Base_Start_IT(&htim4);
 
   /* USER CODE END 2 */
 
@@ -156,6 +164,7 @@ int main(void)
   while (1)
   {
     // Blink LED
+    
     for (i = 0; i < 8; i++)
     {
       HAL_GPIO_WritePin(GPIOC, LEDc13_Pin, 0);
@@ -164,8 +173,11 @@ int main(void)
       HAL_Delay(50);
     }
     HAL_Delay(800);
+    
 
+    
     // Rot Button
+    /*
 	  aState = HAL_GPIO_ReadPin(GPIOA,ButtonA_Pin);
 	  if (aState != aLastState){
 		  if (HAL_GPIO_ReadPin(GPIOA,ButtonB_Pin) != aState) {
@@ -175,20 +187,32 @@ int main(void)
 		  }
 	  }
 
+    aLastState = aState;
+
+    if(counter < 10){
+      counter = 10;
+    }
+    */
 
 	  // OLED
+    /*
 	  itoa(counter, snum, 10);
 	  SSD1306_Puts (snum, &Font_16x26, 1);
 	  SSD1306_UpdateScreen();
 	  HAL_Delay (500);
+    */
+    
 
 	  // StepperMotor
+    /*
 	  for (iStep=0; iStep < stepsperrev; iStep++){
-		  HAL_GPIO_WritePin(GPIOB, MotorSTEP_Pin, GPIO_PIN_SET);
-		  delayMicro(2000);
-		  HAL_GPIO_WritePin(GPIOB, MotorSTEP_Pin, GPIO_PIN_RESET);
-		  delayMicro(2000);
+		  HAL_GPIO_WritePin(GPIOB, MotorSTEP_Pin, 1);
+		  HAL_Delay(10);
+		  HAL_GPIO_WritePin(GPIOB, MotorSTEP_Pin, 0);
+		  HAL_Delay(10);
 	  }
+    */
+    
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -269,48 +293,92 @@ static void MX_I2C1_Init(void)
 }
 
 /**
-  * @brief TIM1 Initialization Function
+  * @brief TIM3 Initialization Function Timer de 1 ms
   * @param None
   * @retval None
   */
-static void MX_TIM1_Init(void)
+static void MX_TIM3_Init(void)
 {
 
-  /* USER CODE BEGIN TIM1_Init 0 */
+  /* USER CODE BEGIN TIM3_Init 0 */
 
-  /* USER CODE END TIM1_Init 0 */
+  /* USER CODE END TIM3_Init 0 */
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
 
-  /* USER CODE BEGIN TIM1_Init 1 */
+  /* USER CODE BEGIN TIM3_Init 1 */
 
-  /* USER CODE END TIM1_Init 1 */
-  htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 72-1;
-  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 0xffff-1;
-  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim1.Init.RepetitionCounter = 0;
-  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim1) != HAL_OK)
+  /* USER CODE END TIM3_Init 1 */
+  htim3.Instance = TIM3;
+  htim3.Init.Prescaler = 72-1;
+  htim3.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim3.Init.Period = 1000;
+  htim3.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim3.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim3) != HAL_OK)
   {
     Error_Handler();
   }
   sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
-  if (HAL_TIM_ConfigClockSource(&htim1, &sClockSourceConfig) != HAL_OK)
+  if (HAL_TIM_ConfigClockSource(&htim3, &sClockSourceConfig) != HAL_OK)
   {
     Error_Handler();
   }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim3, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
-  /* USER CODE BEGIN TIM1_Init 2 */
+  /* USER CODE BEGIN TIM3_Init 2 */
 
-  /* USER CODE END TIM1_Init 2 */
+  /* USER CODE END TIM3_Init 2 */
+
+}
+
+/**
+  * @brief TIM4 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM4_Init(void)
+{
+
+  /* USER CODE BEGIN TIM4_Init 0 */
+
+  /* USER CODE END TIM4_Init 0 */
+
+  TIM_ClockConfigTypeDef sClockSourceConfig = {0};
+  TIM_MasterConfigTypeDef sMasterConfig = {0};
+
+  /* USER CODE BEGIN TIM4_Init 1 */
+
+  /* USER CODE END TIM4_Init 1 */
+  htim4.Instance = TIM4;
+  htim4.Init.Prescaler = 7200-1;
+  htim4.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim4.Init.Period = 10000;
+  htim4.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim4.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim4) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sClockSourceConfig.ClockSource = TIM_CLOCKSOURCE_INTERNAL;
+  if (HAL_TIM_ConfigClockSource(&htim4, &sClockSourceConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
+  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
+  if (HAL_TIMEx_MasterConfigSynchronization(&htim4, &sMasterConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM4_Init 2 */
+
+  /* USER CODE END TIM4_Init 2 */
 
 }
 
